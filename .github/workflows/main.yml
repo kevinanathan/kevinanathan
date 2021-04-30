@@ -1,7 +1,6 @@
 # This is a SQL query to run a vulnerability report.  I am having difficulty with the "Age" attribute.  It will invalidate the query when added as shown below, but the query runs when it is not added.
 
-WITH 
-   vuln_references AS ( 
+ WITH vuln_references AS ( 
       SELECT vulnerability_id, array_to_string(array_agg(reference), ', ') AS references 
       FROM dim_vulnerability 
          JOIN dim_vulnerability_reference USING (vulnerability_id) 
