@@ -1,0 +1,28 @@
+# This is a SQL query to run a vulnerability report.  I am having difficulty with the "Age" attribute.  It will invalidate the query when added as shown below, but the query runs when it is not added.
+
+WITH 
+   vuln_references AS ( 
+      SELECT vulnerability_id, array_to_string(array_agg(reference), ', ') AS references 
+      FROM dim_vulnerability 
+         JOIN dim_vulnerability_reference USING (vulnerability_id) 
+      GROUP BY vulnerability_id 
+   ) 
+SELECT ds.name AS site, da.ip_address, da.host_name, da.mac_address,  
+   dv.title AS vulnerability_title, 
+   round(dv.cvss_V2_score::numeric, 2) AS cvss_V2_score, round(dv.riskscore::numeric, 0) AS risk, favi.date AS discovered_date,
+   CASE WHEN favi.port = -1 THEN NULL ELSE favi.port END AS port,
+   CASE WHEN dv.cvss_V2_score BETWEEN 7.0 AND 10.0 THEN 'HIGH' END AS severity,
+   CASE WHEN dv.cvss_V2_score BETWEEN 4.0 AND 6.9 THEN 'Medium' END AS severity,
+   CASE WHEN dv.cvss_V2_score BETWEEN 3.9 AND 0 THEN 'Low' END AS severity,
+   dp.name AS protocol, dsvc.name AS service, proofAsText(dv.description) AS vulnerability_description, proofAsText(favi.proof) AS proof, date_published, vr.references, dv.exploits,
+   dv.vulnerability_id,dv.description,round(dv.cvss_V3_score::numeric, 2) AS cvss_V3_score,dp.protocol_id, dv.exploits, AGE(dv.date_added) AS vulnerability_added_age, AGE(dv.date_published) AS vulnerability_published_age
+FROM fact_asset_vulnerability_instance favi
+   JOIN dim_asset da USING (asset_id) 
+   JOIN dim_operating_system dos USING (operating_system_id) 
+   JOIN dim_vulnerability dv USING (vulnerability_id) 
+   JOIN dim_site_asset dsa USING (asset_id) 
+   JOIN dim_site ds USING (site_id)     
+   JOIN dim_protocol dp USING (protocol_id) 
+   JOIN dim_service dsvc USING (service_id) 
+   JOIN vuln_references vr USING (vulnerability_id)
+ORDER BY da.ip_address ASC, dv.title ASC
